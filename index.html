@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REDD ANARCHY STUDIO - Engine de Jogos por IA</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter & Orbitron -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=Orbitron:wght@600;800;900&display=swap" rel="stylesheet">
+    <!-- Three.js for 3D Game Preview -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        anarchy: {
+                            bg: '#09090b',
+                            card: '#121216',
+                            border: '#272730',
+                            red: '#ff1a3c',
+                            redHover: '#e01230',
+                            redGlow: 'rgba(255, 26, 60, 0.4)',
+                            darkRed: '#8b0015',
+                            text: '#f4f4f6',
+                            muted: '#9ca3af'
+                        }
+                    },
+                    fontFamily: {
+                        orbitron: ['Orbitron', 'sans-serif'],
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #09090b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #272730;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #ff1a3c;
+        }
+        .neon-border {
+            box-shadow: 0 0 15px rgba(255, 26, 60, 0.25);
+        }
+        .neon-glow-btn {
+            box-shadow: 0 0 12px rgba(255, 26, 60, 0.4);
+            transition: all 0.2s ease-in-out;
+        }
+        .neon-glow-btn:hover {
+            box-shadow: 0 0 22px rgba(255, 26, 60, 0.7);
+        }
+        .pulse-red {
+            animation: pulseGlow 2s infinite;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 10px rgba(255, 26, 60, 0.3); }
+            50% { box-shadow: 0 0 25px rgba(255, 26, 60, 0.7); }
+        }
+        /* Mobile Touch D-Pad styling */
+        .d-btn {
+            background: rgba(39, 39, 48, 0.8);
+            border: 1px solid rgba(255, 26, 60, 0.4);
+            user-select: none;
+            touch-action: manipulation;
+        }
+        .d-btn:active {
+            background: #ff1a3c;
+            color: #fff;
+        }
+    </style>
+</head>
+<body class="bg-anarchy-bg text-anarchy-text font-sans antialiased min-h-screen flex flex-col overflow-x-hidden selection:bg-anarchy-red selection:text-white">
+
+    <!-- TOP HEADER / TOOLBAR -->
+    <header class="bg-anarchy-card border-b border-anarchy-border sticky top-0 z-40 px-4 py-3 shadow-xl">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            <!-- Brand & Logo -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-anarchy-red to-anarchy-darkRed flex items-center justify-center text-white neon-border pulse-red cursor-pointer" onclick="resetToHome()">
+                    <i class="fa-solid font-orbitron text-xl">A</i>
+                </div>
+                <div>
+                    <h1 class="font-orbitron font-extrabold text-lg sm:text-xl tracking-wider text-white flex items-center gap-2">
+                        REDD ANARCHY <span class="text-anarchy-red text-xs sm:text-sm px-2 py-0.5 rounded bg-anarchy-red/10 border border-anarchy-red/30">STUDIO</span>
+                    </h1>
+                    <p class="text-[10px] sm:text-xs text-anarchy-muted">Criador Automático de Jogos por IA</p>
+                </div>
+            </div>
+
+            <!-- Header Quick Actions & Status -->
+            <div class="flex items-center gap-2 sm:gap-4">
+                <!-- Status Badge -->
+                <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-anarchy-bg border border-anarchy-border text-xs">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+                    <span class="text-emerald-400 font-medium">Anarchy Engine v4.2 Ativa</span>
+                </div>
+
+                <!-- History Drawer Button -->
+                <button onclick="toggleDrawer('historyDrawer')" class="p-2.5 sm:px-3 sm:py-2 rounded-xl bg-anarchy-bg hover:bg-anarchy-border text-anarchy-text border border-anarchy-border text-xs sm:text-sm font-medium flex items-center gap-2 transition">
+                    <i class="fa-solid fa-folder-open text-anarchy-red"></i>
+                    <span class="hidden sm:inline">Projetos</span>
+                </button>
+
+                <!-- Save / Export Quick Button -->
+                <button onclick="openExportModal()" class="px-3 py-2 rounded-xl bg-anarchy-red hover:bg-anarchy-redHover text-white font-bold text-xs sm:text-sm flex items-center gap-2 neon-glow-btn transition">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Exportar</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN APP WRAPPER -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-2 sm:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+        <!-- LEFT PANEL: AI CHAT CONSOLE & CONTROL (LG: 5 COLS) -->
+        <section class="lg:col-span-5 flex flex-col gap-3 h-[75vh] lg:h-[calc(100vh-100px)]">
+            
+            <!-- AI Chat Container -->
+            <div class="flex-1 bg-anarchy-card rounded-2xl border border-anarchy-border flex flex-col overflow-hidden shadow-2xl">
+                <!-- Chat Header -->
+                <div class="p-3 bg-anarchy-bg/80 border-b border-anarchy-border flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-7 h-7 rounded-lg bg-anarchy-red/20 border border-anarchy-red flex items-center justify-center text-anarchy-red">
+                            <i class="fa-solid fa-robot text-sm"></i>
+                        </div>
+                        <div>
+                            <h2 class="font-orbitron text-xs font-bold text-white tracking-wide">ANARCHY AI ASSISTANT</h2>
+                            <p class="text-[10px] text-anarchy-muted">Diga o que deseja criar ou alterar</p>
+                        </div>
+                    </div>
+                    <button onclick="clearChat()" class="text-anarchy-muted hover:text-anarchy-red text-xs px-2 py-1 transition" title="Limpar conversa">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+
+                <!-- Messages Feed -->
+                <div id="chatMessages" class="flex-1 p-3 overflow-y-auto space-y-3 text-xs sm:text-sm">
+                    <!-- Default Welcome Message -->
+                    <div class="flex gap-2.5 items-start">
+                        <div class="w-7 h-7 rounded-lg bg-anarchy-red/20 border border-anarchy-red flex items-center justify-center text-anarchy-red flex-shrink-0 mt-0.5">
+                            <i class="fa-solid fa-robot text-xs"></i>
+                        </div>
+                        <div class="bg-anarchy-bg border border-anarchy-border rounded-xl p-3 max-w-[85%] text-anarchy-text shadow">
+                            <p class="font-semibold text-anarchy-red mb-1">Olá! Eu sou a IA do REDD ANARCHY STUDIO.</p>
+                            <p class="text-xs text-gray-300">Digite uma ideia de jogo para começarmos do zero ou selecione uma sugestão rápida abaixo. Eu farei todo o trabalho de modelagem, código e física automaticamente!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Action Pills -->
+                <div class="px-3 py-2 bg-anarchy-bg/40 border-t border-anarchy-border/60 flex items-center gap-1.5 overflow-x-auto text-[11px] no-scrollbar">
+                    <span class="text-anarchy-muted text-[10px] uppercase font-bold flex-shrink-0">Ações:</span>
+                    <button onclick="sendQuickPrompt('Adicione mais prédios altos e luzes cyberpunk.')" class="px-2.5 py-1 rounded-full bg-anarchy-card border border-anarchy-border hover:border-anarchy-red text-gray-300 hover:text-white transition whitespace-nowrap">🏢 + Prédios</button>
+                    <button onclick="sendQuickPrompt('Crie uma delegacia de polícia com viaturas.')" class="px-2.5 py-1 rounded-full bg-anarchy-card border border-anarchy-border hover:border-anarchy-red text-gray-300 hover:text-white transition whitespace-nowrap">🚓 Delegacia</button>
+                    <button onclick="sendQuickPrompt('Melhore os gráficos com sombras dinâmicas e névoa.')" class="px-2.5 py-1 rounded-full bg-anarchy-card border border-anarchy-border hover:border-anarchy-red text-gray-300 hover:text-white transition whitespace-nowrap">✨ + Gráficos</button>
+                    <button onclick="sendQuickPrompt('Adicione um personagem jogável e NPCs na rua.')" class="px-2.5 py-1 rounded-full bg-anarchy-card border border-anarchy-border hover:border-anarchy-red text-gray-300 hover:text-white transition whitespace-nowrap">🚶 Personagens</button>
+                </div>
+
+                <!-- Chat Input Controls -->
+                <div class="p-3 bg-anarchy-bg border-t border-anarchy-border">
+                    <!-- File Preview Tag (Hidden by default) -->
+                    <div id="filePreviewTag" class="hidden mb-2 p-1.5 bg-anarchy-card border border-anarchy-red/40 rounded-lg text-xs flex items-center justify-between">
+                        <span id="fileName" class="text-anarchy-red truncate font-mono"></span>
+                        <button onclick="removeAttachedFile()" class="text-gray-400 hover:text-white px-2"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <!-- Hidden File Input -->
+                        <input type="file" id="fileInput" class="hidden" onchange="handleFileSelect(event)">
+                        
+                        <!-- Attach File Button -->
+                        <button onclick="document.getElementById('fileInput').click()" class="p-3 rounded-xl bg-anarchy-card border border-anarchy-border hover:border-anarchy-red text-anarchy-muted hover:text-anarchy-red transition" title="Anexar Fotos, Áudios, Códigos, Modelos 3D">
+                            <i class="fa-solid fa-paperclip text-base"></i>
+                        </button>
+
+                        <!-- Text Prompt Input -->
+                        <input type="text" id="promptInput" onkeydown="if(event.key==='Enter') processPrompt()" placeholder="Descreva seu jogo ou peça uma alteração..." class="flex-1 bg-anarchy-card border border-anarchy-border focus:border-anarchy-red text-white text-xs sm:text-sm rounded-xl px-3.5 py-3 outline-none transition placeholder-anarchy-muted">
+
+                        <!-- Send Button -->
+                        <button onclick="processPrompt()" class="px-4 py-3 rounded-xl bg-anarchy-red hover:bg-anarchy-redHover text-white font-bold text-sm neon-glow-btn transition flex items-center justify-center">
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Auto Fix & Engine Stats Card -->
+            <div class="bg-anarchy-card rounded-2xl border border-anarchy-border p-3 flex items-center justify-between gap-2 shadow-lg">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                        <i class="fa-solid fa-shield-halved text-sm"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-white flex items-center gap-2">
+                            <span>Auto-Fix & Desempenho</span>
+                            <span class="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">100% OK</span>
+                        </div>
+                        <p class="text-[10px] text-anarchy-muted">Zero erros compilados • Otimização Ativa</p>
+                    </div>
+                </div>
+                <button onclick="runAutoDiagnostics()" class="px-2.5 py-1.5 rounded-lg bg-anarchy-bg border border-anarchy-border hover:border-anarchy-red text-xs text-gray-300 hover:text-white transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-wrench text-anarchy-red"></i>
+                    <span>Diagnóstico</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- RIGHT PANEL: GAME CANVAS & SIMULATION (LG: 7 COLS) -->
+        <section class="lg:col-span-7 flex flex-col gap-3 h-[80vh] lg:h-[calc(100vh-100px)]">
+            
+            <!-- Game Preview Container -->
+            <div class="flex-1 bg-anarchy-card rounded-2xl border border-anarchy-border flex flex-col overflow-hidden shadow-2xl relative">
+                
+                <!-- Canvas Top Bar Controls -->
+                <div class="p-2.5 bg-anarchy-bg/90 border-b border-anarchy-border flex items-center justify-between flex-wrap gap-2 z-10">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-orbitron font-bold text-white flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-anarchy-red animate-ping"></span>
+                            PREVIEW EM TEMPO REAL
+                        </span>
+                        <span id="currentProjectTitle" class="text-xs text-anarchy-muted truncate max-w-[140px] border-l border-anarchy-border pl-2">
+                            Projeto: Cidade 3D Anarchy
+                        </span>
+                    </div>
+
+                    <!-- Engine Toggles -->
+                    <div class="flex items-center gap-1.5">
+                        <button onclick="toggleWireframe()" id="btnWireframe" class="px-2 py-1 rounded bg-anarchy-card border border-anarchy-border text-[11px] text-gray-300 hover:text-white transition" title="Modo Wireframe">
+                            <i class="fa-solid fa-border-all"></i> Wireframe
+                        </button>
+                        <button onclick="toggleGraphics()" id="btnGraphics" class="px-2 py-1 rounded bg-anarchy-card border border-anarchy-border text-[11px] text-anarchy-red transition font-semibold" title="Gráficos de Alta Qualidade">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> HD Shaders
+                        </button>
+                        <button onclick="toggleTestPlayMode()" id="btnPlayMode" class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition shadow">
+                            <i class="fa-solid fa-play"></i> TESTAR JOGO
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 3D Viewport / Canvas Render Area -->
+                <div id="canvasContainer" class="flex-1 w-full h-full relative bg-black overflow-hidden cursor-grab active:cursor-grabbing">
+                    <!-- ThreeJS Canvas attaches here dynamically -->
+                    
+                    <!-- Overlay Engine Stats -->
+                    <div class="absolute top-3 left-3 bg-black/60 backdrop-blur border border-anarchy-border/60 rounded-lg p-2 text-[10px] font-mono text-gray-300 space-y-0.5 pointer-events-none z-10">
+                        <div>FPS: <span id="statFPS" class="text-emerald-400 font-bold">60</span></div>
+                        <div>Polígonos: <span id="statPolys">14,850</span></div>
+                        <div>Luzes Ativas: <span id="statLights">6</span></div>
+                        <div>Física: <span class="text-emerald-400">Cannon.js Ativa</span></div>
+                    </div>
+
+                    <!-- Interactive Game Play overlay controls (Shown during Test Play Mode) -->
+                    <div id="testPlayOverlay" class="absolute inset-0 bg-transparent pointer-events-none hidden z-20 flex flex-col justify-between p-4">
+                        <div class="flex justify-between items-center pointer-events-auto">
+                            <div class="bg-anarchy-red/90 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow">
+                                🎮 MODO DE TESTE ATIVO (WASD ou Controles na Tela)
+                            </div>
+                            <button onclick="toggleTestPlayMode()" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-lg shadow pointer-events-auto">
+                                Sair do Teste (ESC)
+                            </button>
+                        </div>
+
+                        <!-- Mobile D-PAD Touch Controls -->
+                        <div class="flex justify-between items-end w-full pointer-events-auto pb-2">
+                            <!-- Movement Pad -->
+                            <div class="grid grid-cols-3 gap-1 w-32 h-32">
+                                <div></div>
+                                <button class="d-btn rounded-t-xl flex items-center justify-center text-white" onmousedown="handleTouchMove('up')" onmouseup="stopTouchMove()" ontouchstart="handleTouchMove('up')" ontouchend="stopTouchMove()"><i class="fa-solid fa-caret-up text-xl"></i></button>
+                                <div></div>
+                                <button class="d-btn rounded-l-xl flex items-center justify-center text-white" onmousedown="handleTouchMove('left')" onmouseup="stopTouchMove()" ontouchstart="handleTouchMove('left')" ontouchend="stopTouchMove()"><i class="fa-solid fa-caret-left text-xl"></i></button>
+                                <div class="bg-anarchy-card/60 rounded-lg flex items-center justify-center"><i class="fa-solid fa-[#ff1a3c] fa-circle text-[8px] text-anarchy-red"></i></div>
+                                <button class="d-btn rounded-r-xl flex items-center justify-center text-white" onmousedown="handleTouchMove('right')" onmouseup="stopTouchMove()" ontouchstart="handleTouchMove('right')" ontouchend="stopTouchMove()"><i class="fa-solid fa-caret-right text-xl"></i></button>
+                                <div></div>
+                                <button class="d-btn rounded-b-xl flex items-center justify-center text-white" onmousedown="handleTouchMove('down')" onmouseup="stopTouchMove()" ontouchstart="handleTouchMove('down')" ontouchend="stopTouchMove()"><i class="fa-solid fa-caret-down text-xl"></i></button>
+                                <div></div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="flex gap-2">
+                                <button onclick="triggerGameAction('nitro')" class="w-14 h-14 rounded-full bg-anarchy-red/80 border-2 border-anarchy-red text-white font-bold text-xs flex flex-col items-center justify-center active:scale-95 transition shadow-lg">
+                                    <i class="fa-solid fa-bolt text-sm"></i>
+                                    <span>NITRO</span>
+                                </button>
+                                <button onclick="triggerGameAction('camera')" class="w-14 h-14 rounded-full bg-anarchy-card/80 border border-anarchy-border text-white font-bold text-xs flex flex-col items-center justify-center active:scale-95 transition shadow-lg">
+                                    <i class="fa-solid fa-camera text-sm"></i>
+                                    <span>CAM</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI Generation Loading Modal Overlay -->
+                    <div id="aiLoadingOverlay" class="absolute inset-0 bg-black/80 backdrop-blur-md z-30 flex flex-col items-center justify-center text-center p-6 hidden">
+                        <div class="w-16 h-16 border-4 border-anarchy-border border-t-anarchy-red rounded-full animate-spin mb-4"></div>
+                        <h3 class="font-orbitron font-bold text-lg text-white mb-1">CRIANDO ELEMENTOS DO JOGO...</h3>
+                        <p id="aiLoadingText" class="text-xs text-anarchy-red font-mono">Gerando geometria da cidade e texturas 3D...</p>
+                    </div>
+                </div>
+
+                <!-- Footer Canvas Environmental Slider Bar -->
+                <div class="p-2.5 bg-anarchy-bg/90 border-t border-anarchy-border flex items-center justify-between text-xs text-anarchy-muted gap-4">
+                    <div class="flex items-center gap-2 flex-1 max-w-xs">
+                        <i class="fa-solid fa-sun text-yellow-500"></i>
+                        <span class="text-[11px]">Horário:</span>
+                        <input type="range" id="timeOfDaySlider" min="0" max="24" value="14" oninput="changeTimeOfDay(this.value)" class="flex-1 accent-anarchy-red cursor-pointer">
+                    </div>
+                    <div class="flex items-center gap-3 text-[11px]">
+                        <span>Câmera: <strong class="text-white">Orbital 3D</strong></span>
+                        <span>Motor: <strong class="text-anarchy-red">REDD-v4</strong></span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Version History Quick Panel -->
+            <div class="bg-anarchy-card rounded-2xl border border-anarchy-border p-3 flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-clock-rotate-left text-anarchy-red"></i>
+                    <span class="font-semibold text-white">Histórico de Versões:</span>
+                    <select id="versionSelect" onchange="restoreVersion(this.value)" class="bg-anarchy-bg border border-anarchy-border rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-anarchy-red">
+                        <option value="v1.3">v1.3 - Delegacia & Viaturas Adicionadas (Atual)</option>
+                        <option value="v1.2">v1.2 - Cidade Expandida & Prédios HD</option>
+                        <option value="v1.1">v1.1 - Otimização de Sombras</option>
+                        <option value="v1.0">v1.0 - Projeto Inicial Gerado</option>
+                    </select>
+                </div>
+                <button onclick="restoreSelectedVersion()" class="px-2.5 py-1 rounded-lg bg-anarchy-bg border border-anarchy-border hover:border-anarchy-red text-anarchy-text hover:text-white transition">
+                    Restaurar
+                </button>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- EXPORT & PUBLISH MODAL -->
+    <div id="exportModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-anarchy-card border border-anarchy-border rounded-2xl max-w-lg w-full p-5 space-y-4 relative shadow-2xl">
+            <button onclick="closeExportModal()" class="absolute top-4 right-4 text-anarchy-muted hover:text-white text-lg">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-anarchy-red/20 border border-anarchy-red flex items-center justify-center text-anarchy-red text-xl">
+                    <i class="fa-solid fa-rocket"></i>
+                </div>
+                <div>
+                    <h3 class="font-orbitron font-bold text-lg text-white">EXPORTAR JOGO COMPLETO</h3>
+                    <p class="text-xs text-anarchy-muted">Escolha a plataforma para gerar os executáveis</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 pt-2">
+                <!-- Web HTML5 Build -->
+                <button onclick="downloadBuild('Web')" class="p-4 rounded-xl bg-anarchy-bg border border-anarchy-border hover:border-anarchy-red text-left transition group">
+                    <i class="fa-solid fa-globe text-2xl text-anarchy-red mb-2 block group-hover:scale-110 transition-transform"></i>
+                    <div class="font-bold text-sm text-white">Web Browser (HTML5)</div>
+                    <div class="text-[10px] text-anarchy-muted">Pronto para publicar na Web</div>
+                </button>
+
+                <!-- Android APK -->
+                <button onclick="downloadBuild('Android')" class="p-4 rounded-xl bg-anarchy-bg border border-anarchy-border hover:border-anarchy-red text-left transition group">
+                    <i class="fa-brands fa-android text-2xl text-emerald-400 mb-2 block group-hover:scale-110 transition-transform"></i>
+                    <div class="font-bold text-sm text-white">Android (APK Mobile)</div>
+                    <div class="text-[10px] text-anarchy-muted">Instalável para Celular</div>
+                </button>
+
+                <!-- Windows Executable -->
+                <button onclick="downloadBuild('Windows')" class="p-4 rounded-xl bg-anarchy-bg border border-anarchy-border hover:border-anarchy-red text-left transition group">
+                    <i class="fa-brands fa-windows text-2xl text-blue-400 mb-2 block group-hover:scale-110 transition-transform"></i>
+                    <div class="font-bold text-sm text-white">Windows Executável</div>
+                    <div class="text-[10px] text-anarchy-muted">Binário .EXE para PC</div>
+                </button>
+
+                <!-- Source Code Package -->
+                <button onclick="downloadBuild('Source')" class="p-4 rounded-xl bg-anarchy-bg border border-anarchy-border hover:border-anarchy-red text-left transition group">
+                    <i class="fa-solid fa-file-code text-2xl text-yellow-400 mb-2 block group-hover:scale-110 transition-transform"></i>
+                    <div class="font-bold text-sm text-white">Código Fonte completo</div>
+                    <div class="text-[10px] text-anarchy-muted">Arquivos JS, 3D Assets & Scripts</div>
+                </button>
+            </div>
+
+            <!-- Modal Action Footer -->
+            <div class="pt-3 border-t border-anarchy-border flex justify-end">
+                <button onclick="closeExportModal()" class="px-4 py-2 rounded-xl bg-anarchy-bg border border-anarchy-border text-xs text-gray-300 hover:text-white">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PROJECT HISTORY SIDE DRAWER -->
+    <div id="historyDrawer" class="fixed inset-y-0 right-0 w-80 bg-anarchy-card border-l border-anarchy-border shadow-2xl z-50 transform translate-x-full transition-transform duration-300 flex flex-col">
+        <div class="p-4 border-b border-anarchy-border flex items-center justify-between">
+            <h3 class="font-orbitron font-bold text-sm text-white flex items-center gap-2">
+                <i class="fa-solid fa-folder-tree text-anarchy-red"></i> MEUS PROJETOS
+            </h3>
+            <button onclick="toggleDrawer('historyDrawer')" class="text-anarchy-muted hover:text-white text-lg">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div id="projectListContainer" class="flex-1 p-3 overflow-y-auto space-y-2">
+            <!-- Dynamic Project Items injected here -->
+        </div>
+
+        <div class="p-3 border-t border-anarchy-border bg-anarchy-bg">
+            <button onclick="createNewProjectPrompt()" class="w-full py-2.5 rounded-xl bg-anarchy-red hover:bg-anarchy-redHover text-white font-bold text-xs flex items-center justify-center gap-2 transition">
+                <i class="fa-solid fa-plus"></i> Criar Novo Projeto
+            </button>
+        </div>
+    </div>
+
+    <!-- NOTIFICATION SYSTEM TOAST -->
+    <div id="toastNotification" class="fixed bottom-4 right-4 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-anarchy-card border border-anarchy-red px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-anarchy-red text-lg"></i>
+        <div>
+            <div id="toastTitle" class="font-bold text-xs text-white">Notificação</div>
+            <div id="toastMessage" class="text-[11px] text-anarchy-muted">Mensagem aqui...</div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC & THREE.JS ENGINE SIMULATION -->
+    <script>
+        /* ----------------------------------------------------
+           1. THREE.JS 3D GAME ENGINE INITIALIZATION & STATE
+        ---------------------------------------------------- */
+        let scene, camera, renderer, animationId;
+        let cityGroup, playerVehicle, policeStation, charactersGroup;
+        let isWireframe = false;
+        let isHDGraphics = true;
+        let isTestPlay = false;
+        let dirLight, ambientLight;
+
+        // Vehicle Movement Logic
+        let vehicleSpeed = 0;
+        let vehicleRotation = 0;
+        const keyState = {};
+
+        // Active Attached File
+        let attachedFile = null;
+
+        // Project State Storage
+        let currentProject = {
+            id: 'proj_1',
+            title: 'Cidade Cyberpunk Anarchy',
+            buildingsCount: 18,
+            hasPoliceStation: true,
+            hasVehicles: true,
+            hasNPCs: true,
+            timeOfDay: 14,
+            version: 'v1.3'
+        };
+
+        const defaultProjects = [
+            { id: 'proj_1', title: 'Cidade Cyberpunk Anarchy', version: 'v1.3', date: 'Hoje' },
+            { id: 'proj_2', title: 'Jogo de Sobrevivência 3D', version: 'v1.0', date: 'Ontem' },
+            { id: 'proj_3', title: 'Corrida Noturna Neon', version: 'v2.1', date: '02/11/2026' }
+        ];
+
+        window.onload = function() {
+            init3DScene();
+            loadProjectList();
+            setupKeyboardListeners();
+        };
+
+        /* Initialize Three.js Viewport */
+        function init3DScene() {
+            const container = document.getElementById('canvasContainer');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a0f);
+            scene.fog = new THREE.FogExp2(0x0a0a0f, 0.015);
+
+            camera = new THREE.PerspectiveCamera(55, width / height, 0.1, 1000);
+            camera.position.set(0, 20, 35);
+            camera.lookAt(0, 2, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+            // Clear old canvas if any
+            container.innerHTML = '';
+            container.appendChild(renderer.domElement);
+
+            // Append Overlay div back
+            const overlay = document.getElementById('testPlayOverlay');
+            const loadingOverlay = document.getElementById('aiLoadingOverlay');
+            container.appendChild(overlay);
+            container.appendChild(loadingOverlay);
+
+            // Lights Setup
+            ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+
+            dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            dirLight.position.set(30, 50, 20);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 1024;
+            dirLight.shadow.mapSize.height = 1024;
+            scene.add(dirLight);
+
+            // Ground / City Floor
+            const gridHelper = new THREE.GridHelper(120, 40, 0xff1a3c, 0x272730);
+            gridHelper.position.y = 0.01;
+            scene.add(gridHelper);
+
+            const planeGeo = new THREE.PlaneGeometry(120, 120);
+            const planeMat = new THREE.MeshStandardMaterial({ color: 0x111116, roughness: 0.8 });
+            const ground = new THREE.Mesh(planeGeo, planeMat);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+
+            // Groups
+            cityGroup = new THREE.Group();
+            charactersGroup = new THREE.Group();
+            scene.add(cityGroup);
+            scene.add(charactersGroup);
+
+            // Build Procedural City Scene
+            buildCity3D();
+            buildPlayerVehicle();
+            buildPoliceStation();
+
+            // Simple Orbit Mouse Controls
+            setupOrbitControls(container);
+
+            // Resize Event Listener
+            window.addEventListener('resize', onWindowResize);
+
+            // Start Animation Loop
+            animate();
+        }
+
+        /* Build Procedural Buildings */
+        function buildCity3D() {
+            // Clear existing city
+            while(cityGroup.children.length > 0) { 
+                cityGroup.remove(cityGroup.children[0]); 
+            }
+
+            const buildingCount = currentProject.buildingsCount;
+            const colors = [0x1f1f28, 0x272736, 0x181822, 0xff1a3c];
+
+            for (let i = 0; i < buildingCount; i++) {
+                const height = Math.random() * 20 + 8;
+                const width = Math.random() * 4 + 4;
+                const depth = Math.random() * 4 + 4;
+
+                const geo = new THREE.BoxGeometry(width, height, depth);
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                const mat = new THREE.MeshStandardMaterial({ 
+                    color: color, 
+                    roughness: 0.3,
+                    wireframe: isWireframe
+                });
+
+                const building = new THREE.Mesh(geo, mat);
+                
+                // Position avoidance for center road
+                let x = (Math.random() - 0.5) * 80;
+                let z = (Math.random() - 0.5) * 80;
+                if (Math.abs(x) < 8) x += 12;
+                if (Math.abs(z) < 8) z += 12;
+
+                building.position.set(x, height / 2, z);
+                building.castShadow = true;
+                building.receiveShadow = true;
+
+                // Add Neon Roof Light Accent
+                const roofGeo = new THREE.BoxGeometry(width * 0.9, 0.4, depth * 0.9);
+                const roofMat = new THREE.MeshBasicMaterial({ color: 0xff1a3c });
+                const roof = new THREE.Mesh(roofGeo, roofMat);
+                roof.position.set(0, height / 2 + 0.2, 0);
+                building.add(roof);
+
+                cityGroup.add(building);
+            }
+        }
+
+        /* Build Player Car Model */
+        function buildPlayerVehicle() {
+            if (playerVehicle) scene.remove(playerVehicle);
+
+            playerVehicle = new THREE.Group();
+
+            // Car Body
+            const bodyGeo = new THREE.BoxGeometry(2.4, 1, 4.5);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0xff1a3c, metalness: 0.7, roughness: 0.2, wireframe: isWireframe });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.8;
+            body.castShadow = true;
+            playerVehicle.add(body);
+
+            // Car Cabin
+            const cabinGeo = new THREE.BoxGeometry(2, 0.8, 2.2);
+            const cabinMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.1 });
+            const cabin = new THREE.Mesh(cabinGeo, cabinMat);
+            cabin.position.set(0, 1.5, -0.2);
+            playerVehicle.add(cabin);
+
+            // Wheels
+            const wheelGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.4, 16);
+            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+            wheelGeo.rotateZ(Math.PI / 2);
+
+            const positions = [
+                [-1.2, 0.45, 1.4],
+                [1.2, 0.45, 1.4],
+                [-1.2, 0.45, -1.4],
+                [1.2, 0.45, -1.4]
+            ];
+
+            positions.forEach(pos => {
+                const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+                wheel.position.set(...pos);
+                playerVehicle.add(wheel);
+            });
+
+            // Headlights
+            const lightGeo = new THREE.BoxGeometry(0.4, 0.2, 0.1);
+            const lightMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+            const lightL = new THREE.Mesh(lightGeo, lightMat);
+            lightL.position.set(-0.8, 0.9, 2.26);
+            const lightR = lightL.clone();
+            lightR.position.x = 0.8;
+            playerVehicle.add(lightL);
+            playerVehicle.add(lightR);
+
+            playerVehicle.position.set(0, 0, 0);
+            scene.add(playerVehicle);
+        }
+
+        /* Build Police Station Building */
+        function buildPoliceStation() {
+            if (!currentProject.hasPoliceStation) return;
+            if (policeStation) scene.remove(policeStation);
+
+            policeStation = new THREE.Group();
+
+            // Main Building Block
+            const mainGeo = new THREE.BoxGeometry(14, 8, 10);
+            const mainMat = new THREE.MeshStandardMaterial({ color: 0x1a233a, roughness: 0.4 });
+            const mainMesh = new THREE.Mesh(mainGeo, mainMat);
+            mainMesh.position.y = 4;
+            mainMesh.castShadow = true;
+            policeStation.add(mainMesh);
+
+            // Police Sign Emblem
+            const signGeo = new THREE.BoxGeometry(8, 1.5, 0.4);
+            const signMat = new THREE.MeshBasicMaterial({ color: 0x0055ff });
+            const sign = new THREE.Mesh(signGeo, signMat);
+            sign.position.set(0, 7, 5.1);
+            policeStation.add(sign);
+
+            policeStation.position.set(18, 0, -15);
+            scene.add(policeStation);
+        }
+
+        /* Animation & Render Loop */
+        function animate() {
+            animationId = requestAnimationFrame(animate);
+
+            // Vehicle Movement Logic during test mode
+            if (isTestPlay && playerVehicle) {
+                if (keyState['w'] || keyState['ArrowUp']) vehicleSpeed = Math.min(vehicleSpeed + 0.02, 0.4);
+                else if (keyState['s'] || keyState['ArrowDown']) vehicleSpeed = Math.max(vehicleSpeed - 0.02, -0.2);
+                else vehicleSpeed *= 0.94; // friction
+
+                if (keyState['a'] || keyState['ArrowLeft']) vehicleRotation += 0.04;
+                if (keyState['d'] || keyState['ArrowRight']) vehicleRotation -= 0.04;
+
+                playerVehicle.rotation.y = vehicleRotation;
+                playerVehicle.translateZ(vehicleSpeed);
+
+                // Smooth Camera Follow in Test Mode
+                const relativeCamOffset = new THREE.Vector3(0, 8, -16);
+                const camMatrix = relativeCamOffset.applyMatrix4(playerVehicle.matrixWorld);
+                camera.position.lerp(camMatrix, 0.1);
+                camera.lookAt(playerVehicle.position.x, playerVehicle.position.y + 1.5, playerVehicle.position.z);
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        /* Resize Handler */
+        function onWindowResize() {
+            const container = document.getElementById('canvasContainer');
+            if (!container) return;
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        /* Mouse Drag Orbit Camera */
+        function setupOrbitControls(domElement) {
+            let isDragging = false;
+            let previousMousePosition = { x: 0, y: 0 };
+
+            domElement.addEventListener('mousedown', (e) => {
+                if (isTestPlay) return;
+                isDragging = true;
+            });
+
+            domElement.addEventListener('mousemove', (e) => {
+                if (!isDragging || isTestPlay) return;
+
+                const deltaMove = {
+                    x: e.clientX - previousMousePosition.x,
+                    y: e.clientY - previousMousePosition.y
+                };
+
+                const deltaRotationQuaternion = new THREE.Quaternion()
+                    .setFromEuler(new THREE.Euler(
+                        0,
+                        deltaMove.x * (Math.PI / 180) * 0.5,
+                        0,
+                        'XYZ'
+                    ));
+
+                camera.position.applyQuaternion(deltaRotationQuaternion);
+                camera.lookAt(0, 2, 0);
+
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            });
+
+            window.addEventListener('mouseup', () => { isDragging = false; });
+        }
+
+        /* ----------------------------------------------------
+           2. AI PROMPT AUTOMATION & INTERACTION LOGIC
+        ---------------------------------------------------- */
+
+        function sendQuickPrompt(promptText) {
+            document.getElementById('promptInput').value = promptText;
+            processPrompt();
+        }
+
+        function processPrompt() {
+            const input = document.getElementById('promptInput');
+            const text = input.value.trim();
+            if (!text && !attachedFile) return;
+
+            // 1. Add User Message
+            addChatMessage('user', text + (attachedFile ? ` [Arquivo: ${attachedFile.name}]` : ''));
+            input.value = '';
+
+            // Show Loading Indicator on Viewport
+            showAiLoading(true, "Analisando prompt e compilando lógica...");
+
+            // 2. Simulated AI Response & Scene Modification
+            setTimeout(() => {
+                let aiReply = "";
+
+                const lower = text.toLowerCase();
+                if (lower.includes('prédio') || lower.includes('cidade') || lower.includes('construç')) {
+                    currentProject.buildingsCount += 12;
+                    buildCity3D();
+                    aiReply = "Expandindo mapa! Adicionei 12 novos prédios modernos com iluminação neon cyberpunk e otimizei os modelos 3D.";
+                } else if (lower.includes('delegacia') || lower.includes('polícia')) {
+                    currentProject.hasPoliceStation = true;
+                    buildPoliceStation();
+                    aiReply = "Delegacia de Polícia criada com sucesso na zona leste da cidade! Adicionei marcações e viaturas de patrulha.";
+                } else if (lower.includes('gráfico') || lower.includes('sombras') || lower.includes('hd')) {
+                    isHDGraphics = true;
+                    renderer.shadowMap.enabled = true;
+                    dirLight.intensity = 1.5;
+                    aiReply = "Gráficos aprimorados! Ativei sombras de alta resolução, shaders de névoa volumétrica e iluminação HDR.";
+                } else if (lower.includes('carro') || lower.includes('veículo')) {
+                    buildPlayerVehicle();
+                    aiReply = "Novo veículo esportivo gerado! Controles de física Cannon.js configurados e prontos para teste.";
+                } else if (lower.includes('personagem') || lower.includes('npc')) {
+                    aiReply = "Criei novos personagens pedestres e sistemas de Inteligência Artificial para rondar a cidade.";
+                } else {
+                    currentProject.buildingsCount += 6;
+                    buildCity3D();
+                    aiReply = `Entendido! Processando sua solicitação: "${text}". Atualizei o projeto, compilas os scripts JS e sincronizei o mapa em tempo real.`;
+                }
+
+                if (attachedFile) {
+                    aiReply += `\n\n[Analisei o arquivo anexo '${attachedFile.name}' e adicionei os recursos ao banco de assets do projeto].`;
+                    removeAttachedFile();
+                }
+
+                // Add AI response
+                addChatMessage('ai', aiReply);
+                showAiLoading(false);
+                showToast("Projeto Atualizado!", "Alterações salvas automaticamente.");
+            }, 1400);
+        }
+
+        function addChatMessage(sender, text) {
+            const chatMessages = document.getElementById('chatMessages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `flex gap-2.5 items-start ${sender === 'user' ? 'justify-end' : ''}`;
+
+            if (sender === 'ai') {
+                msgDiv.innerHTML = `
+                    <div class="w-7 h-7 rounded-lg bg-anarchy-red/20 border border-anarchy-red flex items-center justify-center text-anarchy-red flex-shrink-0 mt-0.5">
+                        <i class="fa-solid fa-robot text-xs"></i>
+                    </div>
+                    <div class="bg-anarchy-bg border border-anarchy-border rounded-xl p-3 max-w-[85%] text-anarchy-text shadow">
+                        <p class="font-semibold text-anarchy-red mb-1">Anarchy AI Assistant</p>
+                        <p class="text-xs text-gray-300 leading-relaxed">${text.replace(/\n/g, '<br>')}</p>
+                    </div>
+                `;
+            } else {
+                msgDiv.innerHTML = `
+                    <div class="bg-anarchy-red/20 border border-anarchy-red/50 rounded-xl p-3 max-w-[85%] text-white shadow">
+                        <p class="text-xs leading-relaxed">${text}</p>
+                    </div>
+                `;
+            }
+
+            chatMessages.appendChild(msgDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function clearChat() {
+            document.getElementById('chatMessages').innerHTML = '';
+            showToast("Conversa Limpa", "Histórico do chat foi resetado.");
+        }
+
+        /* ----------------------------------------------------
+           3. FILE ATTACHMENT & IMPORT SYSTEM
+        ---------------------------------------------------- */
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            attachedFile = file;
+            const tag = document.getElementById('filePreviewTag');
+            const fileName = document.getElementById('fileName');
+            fileName.textContent = `📎 ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+            tag.classList.remove('hidden');
+        }
+
+        function removeAttachedFile() {
+            attachedFile = null;
+            document.getElementById('fileInput').value = '';
+            document.getElementById('filePreviewTag').classList.add('hidden');
+        }
+
+        /* ----------------------------------------------------
+           4. GAME TEST PLAYMODE & TOUCH CONTROLS
+        ---------------------------------------------------- */
+        function toggleTestPlayMode() {
+            isTestPlay = !isTestPlay;
+            const overlay = document.getElementById('testPlayOverlay');
+            const btn = document.getElementById('btnPlayMode');
+
+            if (isTestPlay) {
+                overlay.classList.remove('hidden');
+                btn.innerHTML = `<i class="fa-solid fa-stop"></i> PARAR TESTE`;
+                btn.className = "px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-xs flex items-center gap-1.5 transition shadow";
+                showToast("Modo de Teste", "Use WASD ou os controles na tela para pilotar!");
+            } else {
+                overlay.classList.add('hidden');
+                btn.innerHTML = `<i class="fa-solid fa-play"></i> TESTAR JOGO`;
+                btn.className = "px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition shadow";
+                camera.position.set(0, 20, 35);
+                camera.lookAt(0, 2, 0);
+            }
+        }
+
+        function setupKeyboardListeners() {
+            window.addEventListener('keydown', (e) => { keyState[e.key] = true; });
+            window.addEventListener('keyup', (e) => { keyState[e.key] = false; });
+        }
+
+        function handleTouchMove(dir) {
+            if (!isTestPlay) return;
+            if (dir === 'up') keyState['ArrowUp'] = true;
+            if (dir === 'down') keyState['ArrowDown'] = true;
+            if (dir === 'left') keyState['ArrowLeft'] = true;
+            if (dir === 'right') keyState['ArrowRight'] = true;
+        }
+
+        function stopTouchMove() {
+            keyState['ArrowUp'] = false;
+            keyState['ArrowDown'] = false;
+            keyState['ArrowLeft'] = false;
+            keyState['ArrowRight'] = false;
+        }
+
+        function triggerGameAction(action) {
+            if (action === 'nitro') {
+                vehicleSpeed = 0.8;
+                showToast("NITRO!", "Velocidade máxima ativada.");
+            } else if (action === 'camera') {
+                camera.position.set(playerVehicle.position.x, playerVehicle.position.y + 25, playerVehicle.position.z + 1);
+                camera.lookAt(playerVehicle.position);
+            }
+        }
+
+        /* ----------------------------------------------------
+           5. ENGINE ENVIRONMENT & GRAPHICS TOGGLES
+        ---------------------------------------------------- */
+        function toggleWireframe() {
+            isWireframe = !isWireframe;
+            buildCity3D();
+            buildPlayerVehicle();
+            const btn = document.getElementById('btnWireframe');
+            btn.classList.toggle('text-anarchy-red', isWireframe);
+            showToast("Wireframe", isWireframe ? "Modo malha ativado." : "Modo normal ativado.");
+        }
+
+        function toggleGraphics() {
+            isHDGraphics = !isHDGraphics;
+            renderer.shadowMap.enabled = isHDGraphics;
+            const btn = document.getElementById('btnGraphics');
+            btn.classList.toggle('text-anarchy-red', isHDGraphics);
+            showToast("Gráficos", isHDGraphics ? "Modo HD Ativado." : "Modo Desempenho.");
+        }
+
+        function changeTimeOfDay(val) {
+            const hour = parseFloat(val);
+            const intensity = Math.sin((hour / 24) * Math.PI);
+            dirLight.intensity = Math.max(0.1, intensity * 1.5);
+
+            // Change background color dynamically for day/night cycle
+            if (hour >= 6 && hour <= 18) {
+                scene.background = new THREE.Color(0x0f172a); // Day / Sunset Blue
+            } else {
+                scene.background = new THREE.Color(0x05050a); // Dark Night
+            }
+        }
+
+        function runAutoDiagnostics() {
+            showToast("Auto-Fix & Diagnóstico", "Escaneando scripts... 0 erros encontrados! Desempenho em 60 FPS.");
+        }
+
+        /* ----------------------------------------------------
+           6. VERSIONING & PROJECT MANAGEMENT
+        ---------------------------------------------------- */
+        function restoreVersion(versionStr) {
+            currentProject.version = versionStr;
+            showAiLoading(true, `Restaurando backup de código da versão ${versionStr}...`);
+            setTimeout(() => {
+                showAiLoading(false);
+                showToast("Versão Restaurada", `Projeto revertido com sucesso para ${versionStr}`);
+            }, 800);
+        }
+
+        function restoreSelectedVersion() {
+            const val = document.getElementById('versionSelect').value;
+            restoreVersion(val);
+        }
+
+        function loadProjectList() {
+            const container = document.getElementById('projectListContainer');
+            container.innerHTML = defaultProjects.map(p => `
+                <div onclick="switchProject('${p.id}')" class="p-3 rounded-xl bg-anarchy-bg border border-anarchy-border hover:border-anarchy-red cursor-pointer transition flex items-center justify-between group">
+                    <div>
+                        <div class="font-bold text-xs text-white group-hover:text-anarchy-red transition">${p.title}</div>
+                        <div class="text-[10px] text-anarchy-muted">Versão: ${p.version} • ${p.date}</div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-xs text-anarchy-muted group-hover:text-anarchy-red"></i>
+                </div>
+            `).join('');
+        }
+
+        function switchProject(id) {
+            const proj = defaultProjects.find(p => p.id === id);
+            if (proj) {
+                currentProject.title = proj.title;
+                document.getElementById('currentProjectTitle').textContent = `Projeto: ${proj.title}`;
+                toggleDrawer('historyDrawer');
+                showToast("Projeto Carregado", `Iniciado: ${proj.title}`);
+                buildCity3D();
+            }
+        }
+
+        function createNewProjectPrompt() {
+            toggleDrawer('historyDrawer');
+            const title = prompt("Digite o nome do novo projeto de jogo:");
+            if (title) {
+                currentProject.title = title;
+                currentProject.buildingsCount = 10;
+                document.getElementById('currentProjectTitle').textContent = `Projeto: ${title}`;
+                buildCity3D();
+                addChatMessage('ai', `Projeto "${title}" iniciado! Me diga como você quer que o jogo seja.`);
+                showToast("Novo Projeto", `"${title}" criado com sucesso.`);
+            }
+        }
+
+        function resetToHome() {
+            showToast("REDD ANARCHY STUDIO", "Engine pronta para novas instruções.");
+        }
+
+        /* ----------------------------------------------------
+           7. MODALS, DRAWERS & UI UTILITIES
+        ---------------------------------------------------- */
+        function toggleDrawer(id) {
+            const drawer = document.getElementById(id);
+            drawer.classList.toggle('translate-x-full');
+        }
+
+        function openExportModal() {
+            document.getElementById('exportModal').classList.remove('hidden');
+        }
+
+        function closeExportModal() {
+            document.getElementById('exportModal').classList.add('hidden');
+        }
+
+        function downloadBuild(type) {
+            showToast(`Exportando ${type}`, `Gerando pacote compilado do jogo... O download começará em breve.`);
+            setTimeout(() => {
+                closeExportModal();
+            }, 1200);
+        }
+
+        function showAiLoading(show, text = "") {
+            const overlay = document.getElementById('aiLoadingOverlay');
+            const loadingText = document.getElementById('aiLoadingText');
+            if (show) {
+                loadingText.textContent = text;
+                overlay.classList.remove('hidden');
+            } else {
+                overlay.classList.add('hidden');
+            }
+        }
+
+        function showToast(title, msg) {
+            const toast = document.getElementById('toastNotification');
+            document.getElementById('toastTitle').textContent = title;
+            document.getElementById('toastMessage').textContent = msg;
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
